@@ -308,53 +308,62 @@ class MembreViewSet(viewsets.ModelViewSet):
                     return val
             return None
 
-        def is_name_line(text):
-            """Retourne True si la ligne ressemble à un nom de personne."""
+        def classify_header(text_upper):
+            """Retourne le statut socio-pro si la cellule est un en-tête de colonne."""
+            if re.search(r'PROFESSIONNEL', text_upper):
+                return "TRAVAILLEUR"
+            if re.search(r'DOCTORAL|MASTER|\bINGÉNI|INGENI|MÉDECINE|MEDECINE|\bLICENCE\b', text_upper):
+                return "ETUDIANT"
+            return None
+
+        def is_name_cell(text):
+            """Retourne True si le texte d'une cellule ressemble à un nom de personne."""
             text = text.strip()
-            if len(text) < 4 or len(text) > 70:
+            if len(text) < 3 or len(text) > 65:
                 return False
-            # Ignorer les lignes trop courtes ou qui sont des mots-clés
-            if PDF_SKIP_PATTERNS.match(text):
+            upper = text.upper()
+            # En-têtes/mots-clés à ignorer
+            SKIP_EXACT = {
+                "ABAGUMYABANGA", "SECTION MAROC", "SECTION", "MAROC",
+                "LES PROFESSIONNELS", "PROFESSIONNELS", "SPÉCIALTÉ",
+                "SPÉCIALITÉ", "N°", "NOM", "PRÉNOM", "LISTE",
+                "CYCLE DOCTORAL", "DOCTORAL", "MASTER",
+                "INGÉNIEURIE", "MÉDECINE", "MEDECINE", "LICENCE",
+            }
+            if upper in SKIP_EXACT:
                 return False
-            # Doit contenir au moins 2 mots
+            if upper.startswith("CELLULE"):
+                return False
+            # Au moins 2 mots
             parts = text.split()
             if len(parts) < 2:
                 return False
-            # Doit contenir principalement des lettres
-            alpha_chars = sum(1 for c in text if c.isalpha() or c in "-' ")
-            if alpha_chars / len(text) < 0.75:
+            # Principalement des lettres
+            alpha = sum(1 for c in text if c.isalpha() or c in " -'")
+            if len(text) > 0 and alpha / len(text) < 0.72:
                 return False
-            # Exclure les lignes avec des chiffres ou caractères spéciaux
-            if re.search(r'\d{2,}', text):
+            if re.search(r'\d{3,}', text):
                 return False
             return True
 
-        def parse_name(line):
-            """Extrait nom/prénom depuis une ligne."""
-            # Supprimer titres honorifiques
-            line = re.sub(
-                r'^(Dr\.?\s*|S\.E\.?\s*|M\.?\s*(?=\b)|Mme\.?\s*|Prof\.?\s*|'
-                r'1er\s+|1ère\s+|2è[mèe]*\s+|Ambassadeur\s+)',
-                '', line.strip(), flags=re.IGNORECASE
+        def parse_name(cell_text):
+            """Extrait (nom, prénom) depuis le texte d'une cellule."""
+            t = cell_text.strip()
+            t = re.sub(
+                r'^(Dr\.?\s*|S\.E\.?\s*|M\.?\s*(?=\b[A-Z])|Mme\.?\s*|Prof\.?\s*)',
+                '', t, flags=re.IGNORECASE,
             )
-            # Supprimer annotations entre parenthèses
-            line = re.sub(r'\s*\(.*?\)', '', line).strip()
-            # Supprimer rôles officiels en fin
-            line = re.sub(
-                r'\s*(Ambassadeur|Conseiller|Attaché|Chancelier).*$',
-                '', line, flags=re.IGNORECASE
-            ).strip()
-            parts = line.split()
+            t = re.sub(r'\s*\(.*?\)', '', t)
+            t = re.sub(r'\s*(Ambassadeur|Conseiller|Attaché|Chancelier)\b.*$', '', t, flags=re.IGNORECASE)
+            t = t.strip()
+            parts = t.split()
             if len(parts) < 2:
                 return None, None
-            # Heuristique : si le premier mot est en MAJUSCULES → c'est le NOM
             if parts[0] == parts[0].upper() and len(parts[0]) > 1:
                 return parts[0], ' '.join(parts[1:])
-            # Sinon premier mot = NOM (capitalisé), reste = prénom
             return parts[0], ' '.join(parts[1:])
 
         def infer_sex(prenom):
-            """Déduit le sexe à partir du prénom."""
             if not prenom:
                 return "M"
             first = prenom.split()[0].lower().strip(".,")
@@ -363,60 +372,74 @@ class MembreViewSet(viewsets.ModelViewSet):
         extracted = []
         current_cellule = ""
         current_statut = "AUTRE"
-        current_categorie = "ABAGUMYABANGA"
 
         try:
             with pdfplumber.open(file) as pdf:
-                for page_num, page in enumerate(pdf.pages):
-                    text = page.extract_text()
-                    if not text:
+                for page in pdf.pages:
+                    tables = page.extract_tables()
+                    if not tables:
                         continue
 
-                    lines = [l.strip() for l in text.split('\n') if l.strip()]
+                    # col_idx → statut (mis à jour par les en-têtes de colonnes)
+                    col_statuts: dict = {}
 
-                    for line in lines:
-                        upper = line.upper()
+                    for table in tables:
+                        for row in table:
+                            if not row:
+                                continue
 
-                        # Détecter la cellule
-                        if "CELLULE" in upper:
-                            detected = detect_cellule(upper)
-                            if detected:
-                                current_cellule = detected
-                            continue
+                            # ── Passe 1 : détecter si c'est une ligne d'en-têtes ──
+                            new_col_statuts = {}
+                            for ci, cell in enumerate(row):
+                                if not cell:
+                                    continue
+                                upper_cs = str(cell).strip().upper()
+                                if "CELLULE" in upper_cs:
+                                    detected = detect_cellule(upper_cs)
+                                    if detected:
+                                        current_cellule = detected
+                                    new_col_statuts[ci] = None
+                                else:
+                                    st = classify_header(upper_cs)
+                                    if st is not None:
+                                        new_col_statuts[ci] = st
 
-                        # Détecter le type socio-professionnel
-                        if re.search(r'PROFESSIONNEL', upper):
-                            current_statut = "TRAVAILLEUR"
-                            continue
-                        if re.search(r'CYCLE\s+DOCTORAL', upper):
-                            current_statut = "ETUDIANT"
-                            continue
-                        if re.search(r'\bMASTER\b', upper):
-                            current_statut = "ETUDIANT"
-                            continue
-                        if re.search(r'INGÉNI|INGENI', upper):
-                            current_statut = "ETUDIANT"
-                            continue
-                        if re.search(r'MÉDECINE|MEDECINE', upper):
-                            current_statut = "ETUDIANT"
-                            continue
-                        if re.search(r'\bLICENCE\b', upper):
-                            current_statut = "ETUDIANT"
-                            continue
+                            if new_col_statuts:
+                                col_statuts = {k: v for k, v in new_col_statuts.items() if v}
+                                vals = [v for v in col_statuts.values() if v]
+                                if vals:
+                                    current_statut = vals[0]
+                                continue  # ligne d'en-tête → pas de noms
 
-                        # Essayer de parser comme nom
-                        if is_name_line(line):
-                            nom, prenom = parse_name(line)
-                            if nom and prenom and len(nom) >= 2 and len(prenom) >= 2:
-                                sexe = infer_sex(prenom)
-                                extracted.append({
-                                    "nom": nom,
-                                    "prenom": prenom,
-                                    "sexe": sexe,
-                                    "cellule": current_cellule,
-                                    "statut_socio_pro": current_statut,
-                                    "categorie_affiliation": current_categorie,
-                                })
+                            # ── Passe 2 : traiter les cellules de données ──
+                            for ci, cell in enumerate(row):
+                                if not cell:
+                                    continue
+                                cs = str(cell).strip()
+                                if not cs:
+                                    continue
+                                upper_cs = cs.upper()
+
+                                # Cellule fusionnée contenant un nom de cellule
+                                if "CELLULE" in upper_cs:
+                                    detected = detect_cellule(upper_cs)
+                                    if detected:
+                                        current_cellule = detected
+                                    continue
+
+                                cell_statut = col_statuts.get(ci, current_statut) or current_statut
+
+                                if is_name_cell(cs):
+                                    nom, prenom = parse_name(cs)
+                                    if nom and prenom and len(nom) >= 2 and len(prenom) >= 2:
+                                        extracted.append({
+                                            "nom": nom,
+                                            "prenom": prenom,
+                                            "sexe": infer_sex(prenom),
+                                            "cellule": current_cellule,
+                                            "statut_socio_pro": cell_statut,
+                                            "categorie_affiliation": "ABAGUMYABANGA",
+                                        })
 
         except Exception as e:
             return Response(
