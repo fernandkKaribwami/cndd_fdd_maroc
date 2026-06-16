@@ -179,7 +179,7 @@ export default function MembreFormModal({ open, onClose, onSuccess, membreId }: 
             exit={{ opacity: 0, scale: 0.95, y: 16 }}
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
             className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
-            style={{ boxShadow: "0 24px 80px rgba(0,0,0,0.2)" }}>
+            style={{ boxShadow: "var(--modal-shadow)" }}>
 
             {/* Bande tricolore */}
             <div className="flex h-1.5 rounded-t-2xl overflow-hidden">
@@ -306,7 +306,7 @@ export default function MembreFormModal({ open, onClose, onSuccess, membreId }: 
                       style={{ overflow: "hidden" }}>
                       <div className="border-t border-gray-100 mb-5"/>
                       <SectionTitle num={4} label="Profil académique" accent="#1EB53A" />
-                      <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-green-50 border border-green-100">
+                      <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-green-50 dark:bg-emerald-950/30 border border-green-100 dark:border-emerald-900/40">
                         <Field label="Cycle">
                           <select className={SELECT_CLS} value={profil.cycle} onChange={e => setPro("cycle", e.target.value)}>
                             <option value="">Sélectionner</option>

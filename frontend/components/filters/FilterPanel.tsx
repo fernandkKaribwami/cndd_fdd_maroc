@@ -86,7 +86,7 @@ export default function FilterPanel({
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.18 }}
             className="absolute top-full left-0 mt-2 w-72 p-4 rounded-2xl z-50 bg-white"
-            style={{ border: "1px solid #E5E7EB", boxShadow: "0 16px 48px rgba(0,0,0,0.12)" }}>
+            style={{ border: "1px solid var(--border-color)", boxShadow: "var(--dropdown-shadow)" }}>
 
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900 text-sm">Filtres</h3>

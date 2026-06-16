@@ -102,7 +102,7 @@ export default function Sidebar() {
       </AnimatePresence>
 
       {/* ── Déconnexion ────────────────────────────────────────── */}
-      <div className="px-2 pb-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 12 }}>
+      <div className="px-2 pb-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 12 }}>
         <motion.button
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.97 }}

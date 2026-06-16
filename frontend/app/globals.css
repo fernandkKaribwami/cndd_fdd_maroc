@@ -4,11 +4,23 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+/* ─── CSS Variables — thème clair / sombre ──────────────────────── */
 :root {
   --primary: #CE1126;
   --secondary: #1EB53A;
-  --background: #F5F5F5;
-  --foreground: #1F2937;
+  --app-bg: #EEF2F7;
+  --surface: #ffffff;
+  --border-color: #e5e7eb;
+  --modal-shadow: 0 24px 80px rgba(0,0,0,0.2);
+  --dropdown-shadow: 0 16px 48px rgba(0,0,0,0.12);
+}
+
+.dark {
+  --app-bg: #0c1322;
+  --surface: #1e293b;
+  --border-color: #334155;
+  --modal-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  --dropdown-shadow: 0 16px 48px rgba(0,0,0,0.5);
 }
 
 * {
@@ -19,49 +31,66 @@
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--app-bg);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar custom */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ─── Dark mode — overrides Tailwind automatiques ───────────────── */
+
+/* Backgrounds */
+.dark .bg-white      { background-color: var(--surface); }
+.dark .bg-gray-50    { background-color: #162033; }
+.dark .bg-gray-100   { background-color: #1a2540; }
+.dark thead tr       { background-color: #162033 !important; }
+
+/* Text */
+.dark .text-gray-900 { color: #f1f5f9; }
+.dark .text-gray-800 { color: #e2e8f0; }
+.dark .text-gray-700 { color: #cbd5e1; }
+.dark .text-gray-600 { color: #94a3b8; }
+.dark .text-gray-500 { color: #94a3b8; }
+.dark .text-gray-400 { color: #64748b; }
+.dark .text-gray-300 { color: #475569; }
+
+/* Borders */
+.dark .border-gray-50  { border-color: #1e293b; }
+.dark .border-gray-100 { border-color: #253047; }
+.dark .border-gray-200 { border-color: #334155; }
+
+/* Inputs / selects / textareas — app forms (login uses inline styles → non affecté) */
+.dark input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.dark textarea,
+.dark select {
+  background-color: #1a2540 !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
 }
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-::-webkit-scrollbar-thumb {
-  background: #CE1126;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #991B1B;
-}
+.dark input::placeholder,
+.dark textarea::placeholder { color: #475569 !important; }
+
+/* Hover lignes tableau */
+.dark tr:hover { background-color: rgba(30, 41, 59, 0.7) !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: #f1f1f1; }
+::-webkit-scrollbar-thumb  { background: #CE1126; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #991B1B; }
+.dark ::-webkit-scrollbar-track { background: #1e293b; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #CE1126; }
 
 /* Animations */
 @layer utilities {
-  .animate-fade-in {
-    animation: fadeIn 0.4s ease-in-out;
-  }
-  .animate-slide-up {
-    animation: slideUp 0.4s ease-out;
-  }
+  .animate-fade-in  { animation: fadeIn 0.4s ease-in-out; }
+  .animate-slide-up { animation: slideUp 0.4s ease-out; }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(16px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 /* Badge statuts */
-.badge-a-jour { @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-a-jour    { @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
 .badge-en-retard { @apply bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
-.badge-partiel { @apply bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
-.badge-exonere { @apply bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-partiel   { @apply bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-exonere   { @apply bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-0.5 rounded-full; }

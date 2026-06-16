@@ -24,7 +24,7 @@ export default function AppLayout({ children, title, subtitle }: AppLayoutProps)
   }, [router]);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#EEF2F7" }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: "var(--app-bg)" }}>
 
       <Sidebar />
 
@@ -58,7 +58,7 @@ export default function AppLayout({ children, title, subtitle }: AppLayoutProps)
             {children}
 
             {/* ── Footer développeur ── */}
-            <div className="mt-10 pt-4 border-t border-gray-200/60 flex items-center justify-center gap-3 flex-wrap">
+            <div className="mt-10 pt-4 border-t border-gray-200/60 dark:border-slate-700/60 flex items-center justify-center gap-3 flex-wrap">
               <div className="flex items-center gap-1.5">
                 <Code2 size={11} className="text-gray-300"/>
                 <span className="text-xs text-gray-400">Développé par</span>

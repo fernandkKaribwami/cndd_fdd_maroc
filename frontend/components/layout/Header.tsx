@@ -1,10 +1,10 @@
 "use client";
 
-import { Bell, Search, X, ChevronDown, LogOut } from "lucide-react";
-
+import { Bell, Search, X, ChevronDown, LogOut, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { logout } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 
 interface HeaderProps {
   title: string;
@@ -14,9 +14,10 @@ interface HeaderProps {
 export default function Header({ title, subtitle }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
+  const { theme, toggle } = useTheme();
 
   return (
-    <header className="bg-white border-b border-gray-200/80 px-6 py-3.5 flex items-center justify-between flex-shrink-0">
+    <header className="bg-white dark:border-slate-700 border-b border-gray-200/80 px-6 py-3.5 flex items-center justify-between flex-shrink-0">
       {/* Titre */}
       <motion.div key={title} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25 }}>
         <h1 className="text-lg font-bold text-gray-900">{title}</h1>
@@ -51,6 +52,27 @@ export default function Header({ title, subtitle }: HeaderProps) {
           className="relative w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 bg-white transition-colors">
           <Bell size={15} />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border border-white" />
+        </motion.button>
+
+        {/* Toggle thème */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={toggle}
+          title={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
+          className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:border-gray-300 bg-white transition-colors"
+        >
+          <AnimatePresence mode="wait">
+            {theme === "dark" ? (
+              <motion.div key="sun" initial={{ rotate: -30, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 30, opacity: 0 }} transition={{ duration: 0.2 }}>
+                <Sun size={15} />
+              </motion.div>
+            ) : (
+              <motion.div key="moon" initial={{ rotate: 30, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -30, opacity: 0 }} transition={{ duration: 0.2 }}>
+                <Moon size={15} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.button>
 
         {/* Séparateur */}
