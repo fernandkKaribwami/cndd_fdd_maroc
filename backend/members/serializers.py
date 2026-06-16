@@ -28,7 +28,7 @@ class MembreListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "nom", "prenom", "sexe", "categorie_affiliation",
             "statut_socio_pro", "statut_compte", "ville_residence",
-            "date_adhesion", "statut_cotisation",
+            "cellule", "date_adhesion", "statut_cotisation",
         ]
 
     def get_statut_cotisation(self, obj):
@@ -50,7 +50,7 @@ class MembreDetailSerializer(serializers.ModelSerializer):
             "id", "nom", "prenom", "nom_complet", "sexe", "date_naissance",
             "telephone", "email", "ville_residence", "date_arrivee_maroc",
             "categorie_affiliation", "statut_socio_pro", "statut_compte",
-            "date_adhesion", "observations", "profil_etudiant", "statut_cotisation",
+            "cellule", "date_adhesion", "observations", "profil_etudiant", "statut_cotisation",
         ]
 
     def get_statut_cotisation(self, obj):
@@ -67,7 +67,7 @@ class MembreCreateUpdateSerializer(serializers.ModelSerializer):
             "id", "nom", "prenom", "sexe", "date_naissance",
             "telephone", "email", "ville_residence", "date_arrivee_maroc",
             "categorie_affiliation", "statut_socio_pro", "statut_compte",
-            "observations", "profil_etudiant",
+            "cellule", "observations", "profil_etudiant",
         ]
 
     def create(self, validated_data):

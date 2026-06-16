@@ -1,6 +1,17 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
+export const CELLULES_MAROC = [
+  { value: "TANGER_TETOUAN_OUJDA", label: "Cellule Tanger-Tétouan-Oujda" },
+  { value: "KENITRA",              label: "Cellule Kénitra" },
+  { value: "AGADIR",               label: "Cellule Agadir" },
+  { value: "RABAT_SALE",           label: "Cellule Rabat-Salé" },
+  { value: "LAAYOUNE_DAKHLA",      label: "Cellule Laâyoune-Dakhla" },
+  { value: "FEZ_MEKNES",           label: "Cellule Fès-Meknès" },
+  { value: "CASABLANCA",           label: "Cellule Casablanca" },
+  { value: "AUTRE",                label: "Autre cellule" },
+];
+
 export const VILLES_MAROC = [
   "Agadir", "Al Hoceima", "Azilal", "Azrou", "Béni Mellal", "Berkane",
   "Berrechid", "Casablanca", "Chefchaouen", "Dakhla", "El Jadida",
@@ -89,6 +100,13 @@ export const membresApi = {
     const fd = new FormData();
     fd.append("file", file);
     return api.post("/membres/import-excel/", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+  importPdf: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return api.post("/membres/import-pdf/", fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },

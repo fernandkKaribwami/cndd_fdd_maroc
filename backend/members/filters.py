@@ -6,6 +6,7 @@ class MembreFilter(django_filters.FilterSet):
     nom = django_filters.CharFilter(lookup_expr="icontains")
     prenom = django_filters.CharFilter(lookup_expr="icontains")
     ville_residence = django_filters.CharFilter(lookup_expr="icontains")
+    cellule = django_filters.CharFilter(lookup_expr="exact")
 
     # Filtres sur le profil étudiant (jointure)
     cycle = django_filters.NumberFilter(field_name="profil_etudiant__cycle")
@@ -27,7 +28,7 @@ class MembreFilter(django_filters.FilterSet):
         model = Membre
         fields = [
             "categorie_affiliation", "statut_socio_pro", "statut_compte", "sexe",
-            "nom", "prenom", "ville_residence",
+            "nom", "prenom", "ville_residence", "cellule",
             "cycle", "domaine", "filiere", "niveau", "annee_academique",
             "statut_parcours", "etablissement",
             "statut_cotisation", "annee_cotisation", "trimestre_cotisation",

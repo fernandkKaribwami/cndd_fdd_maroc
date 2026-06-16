@@ -12,11 +12,11 @@ class ProfilEtudiantInline(admin.StackedInline):
 @admin.register(Membre)
 class MembreAdmin(ImportExportModelAdmin):
     list_display = [
-        "nom", "prenom", "sexe", "categorie_affiliation",
+        "nom", "prenom", "sexe", "cellule", "categorie_affiliation",
         "statut_socio_pro", "statut_compte", "ville_residence", "date_adhesion"
     ]
     list_filter = [
-        "categorie_affiliation", "statut_socio_pro", "statut_compte",
+        "cellule", "categorie_affiliation", "statut_socio_pro", "statut_compte",
         "sexe", "ville_residence",
     ]
     search_fields = ["nom", "prenom", "email", "telephone"]
@@ -33,7 +33,7 @@ class MembreAdmin(ImportExportModelAdmin):
             "fields": ("telephone", "email", "ville_residence", "date_arrivee_maroc")
         }),
         ("Affiliation CNDD-FDD", {
-            "fields": ("categorie_affiliation", "statut_compte", "date_adhesion")
+            "fields": ("categorie_affiliation", "cellule", "statut_compte", "date_adhesion")
         }),
         ("Statut socio-professionnel", {
             "fields": ("statut_socio_pro",)

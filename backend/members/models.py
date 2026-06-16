@@ -19,6 +19,16 @@ class Membre(models.Model):
         ("INACTIF", "Inactif"),
         ("SUSPENDU", "Suspendu"),
     ]
+    CELLULE_CHOICES = [
+        ("TANGER_TETOUAN_OUJDA", "Cellule Tanger-Tétouan-Oujda"),
+        ("KENITRA", "Cellule Kénitra"),
+        ("AGADIR", "Cellule Agadir"),
+        ("RABAT_SALE", "Cellule Rabat-Salé"),
+        ("LAAYOUNE_DAKHLA", "Cellule Laâyoune-Dakhla"),
+        ("FEZ_MEKNES", "Cellule Fès-Meknès"),
+        ("CASABLANCA", "Cellule Casablanca"),
+        ("AUTRE", "Autre cellule"),
+    ]
 
     nom = models.CharField(max_length=100, verbose_name="Nom")
     prenom = models.CharField(max_length=100, verbose_name="Prénom")
@@ -52,6 +62,12 @@ class Membre(models.Model):
         verbose_name="Statut du compte"
     )
 
+    cellule = models.CharField(
+        max_length=25,
+        choices=CELLULE_CHOICES,
+        blank=True,
+        verbose_name="Cellule"
+    )
     date_adhesion = models.DateField(auto_now_add=True, verbose_name="Date d'adhésion")
     observations = models.TextField(blank=True, verbose_name="Observations")
 

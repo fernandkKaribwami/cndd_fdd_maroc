@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, UserPlus, UserCog } from "lucide-react";
-import { membresApi, referentielsApi, VILLES_MAROC } from "@/lib/api";
+import { membresApi, referentielsApi, VILLES_MAROC, CELLULES_MAROC } from "@/lib/api";
 
 interface Ref { id: number; nom: string; }
 
@@ -43,6 +43,7 @@ const EMPTY_FORM = {
   date_naissance: "", telephone: "", email: "",
   ville_residence: "", date_arrivee_maroc: "",
   categorie_affiliation: "DIASPORA",
+  cellule: "",
   statut_socio_pro: "AUTRE",
   statut_compte: "ACTIF",
   observations: "",
@@ -104,6 +105,7 @@ export default function MembreFormModal({ open, onClose, onSuccess, membreId }: 
         ville_residence:      m.ville_residence || "",
         date_arrivee_maroc:   m.date_arrivee_maroc || "",
         categorie_affiliation: m.categorie_affiliation || "DIASPORA",
+        cellule:              m.cellule || "",
         statut_socio_pro:     m.statut_socio_pro || "AUTRE",
         statut_compte:        m.statut_compte || "ACTIF",
         observations:         m.observations || "",
@@ -292,6 +294,16 @@ export default function MembreFormModal({ open, onClose, onSuccess, membreId }: 
                         <option value="SUSPENDU">Suspendu</option>
                       </select>
                     </Field>
+                    <div className="col-span-3">
+                      <Field label="Cellule">
+                        <select className={SELECT_CLS} value={form.cellule} onChange={e => set("cellule", e.target.value)}>
+                          <option value="">— Aucune cellule —</option>
+                          {CELLULES_MAROC.map(c => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
                   </div>
                 </div>
 

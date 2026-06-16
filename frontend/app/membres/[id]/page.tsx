@@ -6,9 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, User, GraduationCap, CreditCard, Phone, Mail, MapPin,
   Calendar, Award, CheckCircle, XCircle, Clock, AlertCircle, TrendingUp,
-  Edit2, Building,
+  Edit2, Building, Network,
 } from "lucide-react";
-import { membresApi, cotisationsApi } from "@/lib/api";
+import { membresApi, cotisationsApi, CELLULES_MAROC } from "@/lib/api";
 import AppLayout from "@/components/layout/AppLayout";
 import MembreFormModal from "@/components/membres/MembreFormModal";
 
@@ -24,9 +24,13 @@ interface Membre {
   date_naissance: string | null; telephone: string; email: string;
   ville_residence: string; date_arrivee_maroc: string | null;
   categorie_affiliation: string; statut_socio_pro: string;
-  statut_compte: string; date_adhesion: string; observations: string;
+  statut_compte: string; cellule: string; date_adhesion: string; observations: string;
   profil_etudiant: ProfilEtudiant | null;
 }
+
+const CELLULE_LABELS: Record<string, string> = Object.fromEntries(
+  CELLULES_MAROC.map(c => [c.value, c.label])
+);
 interface Cotisation {
   id: number; annee: number; trimestre: number;
   montant_attendu: number; montant_paye: number;
@@ -268,6 +272,12 @@ export default function MembreDetailPage() {
                   style={{ background: `${catColor}30`, color: catColor === "#CE1126" ? "#ff9090" : catColor === "#1EB53A" ? "#5edb78" : "#93c5fd" }}>
                   {CAT_LABELS[membre.categorie_affiliation] || membre.categorie_affiliation}
                 </span>
+                {membre.cellule && (
+                  <span className="text-xs font-semibold px-3 py-1 rounded-full"
+                    style={{ background: "rgba(99,102,241,0.25)", color: "#a5b4fc" }}>
+                    {CELLULE_LABELS[membre.cellule]?.replace("Cellule ", "") || membre.cellule}
+                  </span>
+                )}
                 <span className="text-xs font-semibold px-3 py-1 rounded-full"
                   style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}>
                   {membre.sexe === "M" ? "Homme" : "Femme"}
@@ -346,6 +356,8 @@ export default function MembreDetailPage() {
                 value={membre.date_arrivee_maroc ? new Date(membre.date_arrivee_maroc).toLocaleDateString("fr-FR") : "—"} accent="#EC4899" />
               <InfoRow icon={Award} label="Catégorie CNDD-FDD"
                 value={CAT_LABELS[membre.categorie_affiliation] || membre.categorie_affiliation} accent={catColor} />
+              <InfoRow icon={Network} label="Cellule"
+                value={membre.cellule ? (CELLULE_LABELS[membre.cellule] || membre.cellule) : "—"} accent="#6366F1" />
               {membre.observations && (
                 <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-xl">
                   <p className="text-xs font-medium text-amber-700 mb-1">Observations</p>

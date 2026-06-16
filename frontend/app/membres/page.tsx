@@ -7,14 +7,19 @@ import AppLayout from "@/components/layout/AppLayout";
 import FilterPanel from "@/components/filters/FilterPanel";
 import MembreFormModal from "@/components/membres/MembreFormModal";
 import { membresApi } from "@/lib/api";
-import { Plus, Download, Search, ChevronLeft, ChevronRight, Users, ChevronRight as Go, Pencil, Upload, FileSpreadsheet, Loader2, X } from "lucide-react";
+import { Plus, Download, Search, ChevronLeft, ChevronRight, Users, ChevronRight as Go, Pencil, Upload, FileSpreadsheet, FileText, Loader2, X } from "lucide-react";
+import { CELLULES_MAROC } from "@/lib/api";
 
 interface Membre {
   id: number; nom: string; prenom: string; sexe: string;
   categorie_affiliation: string; statut_socio_pro: string;
   statut_compte: string; ville_residence: string;
-  date_adhesion: string; statut_cotisation: string | null;
+  cellule: string; date_adhesion: string; statut_cotisation: string | null;
 }
+
+const CELLULE_LABEL: Record<string, string> = Object.fromEntries(
+  CELLULES_MAROC.map(c => [c.value, c.label.replace("Cellule ", "")])
+);
 interface PaginatedResponse {
   count: number; next: string | null; previous: string | null; results: Membre[];
 }
@@ -69,8 +74,9 @@ export default function MembresPage() {
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<number | undefined>();
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ crees: number; erreurs: { ligne: number; erreur: string }[] } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importResult, setImportResult] = useState<{ crees: number; ignores?: number; extraits?: number; erreurs: { ligne?: number; index?: number; erreur: string }[] } | null>(null);
+  const fileInputRef    = useRef<HTMLInputElement>(null);
+  const pdfInputRef     = useRef<HTMLInputElement>(null);
   const PAGE_SIZE = 25;
 
   const fetch = useCallback(async () => {
@@ -109,10 +115,27 @@ export default function MembresPage() {
       setImportResult(r.data);
       fetch();
     } catch {
-      setImportResult({ crees: 0, erreurs: [{ ligne: 0, erreur: "Erreur lors de l'import" }] });
+      setImportResult({ crees: 0, erreurs: [{ erreur: "Erreur lors de l'import Excel" }] });
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleImportPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const r = await membresApi.importPdf(file);
+      setImportResult(r.data);
+      fetch();
+    } catch {
+      setImportResult({ crees: 0, erreurs: [{ erreur: "Erreur lors de l'import PDF" }] });
+    } finally {
+      setImporting(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
     }
   };
 
@@ -139,12 +162,21 @@ export default function MembresPage() {
         </motion.button>
 
         <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+        <input ref={pdfInputRef}  type="file" accept=".pdf"       className="hidden" onChange={handleImportPdf} />
 
         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
           onClick={() => fileInputRef.current?.click()} disabled={importing}
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:text-blue-700 transition-colors disabled:opacity-60">
           {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-          Importer
+          Excel
+        </motion.button>
+
+        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+          onClick={() => pdfInputRef.current?.click()} disabled={importing}
+          title="Importer depuis un PDF ABAGUMYABANGA"
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-purple-300 hover:text-purple-700 transition-colors disabled:opacity-60">
+          {importing ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+          PDF
         </motion.button>
 
         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
@@ -173,12 +205,15 @@ export default function MembresPage() {
             }`}>
             <div>
               <span className="font-bold">
-                {importResult.crees} membre{importResult.crees !== 1 ? "s" : ""} importé{importResult.crees !== 1 ? "s" : ""}
+                {importResult.crees} membre{importResult.crees !== 1 ? "s" : ""} créé{importResult.crees !== 1 ? "s" : ""}
               </span>
+              {importResult.extraits !== undefined && (
+                <span className="ml-2 opacity-70">· {importResult.extraits} extraits du PDF{importResult.ignores ? `, ${importResult.ignores} déjà existants` : ""}</span>
+              )}
               {importResult.erreurs.length > 0 && (
                 <ul className="mt-1 text-xs space-y-0.5 opacity-80">
                   {importResult.erreurs.slice(0, 3).map((e, i) => (
-                    <li key={i}>Ligne {e.ligne} : {e.erreur}</li>
+                    <li key={i}>{e.ligne !== undefined ? `Ligne ${e.ligne} : ` : ""}{e.erreur}</li>
                   ))}
                   {importResult.erreurs.length > 3 && (
                     <li>…et {importResult.erreurs.length - 3} autre(s) erreur(s)</li>
@@ -200,8 +235,8 @@ export default function MembresPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/80">
-                {["Membre", "Catégorie", "Ville", "Profil", "Compte", "Cotisation"].map((h, i) => (
-                  <th key={h} className={`text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider ${i === 2 ? "hidden md:table-cell" : ""} ${i === 3 ? "hidden lg:table-cell" : ""}`}>
+                {["Membre", "Catégorie", "Cellule", "Ville", "Profil", "Compte", "Cotisation"].map((h, i) => (
+                  <th key={h} className={`text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider ${i === 2 ? "hidden lg:table-cell" : ""} ${i === 3 ? "hidden md:table-cell" : ""} ${i === 4 ? "hidden xl:table-cell" : ""}`}>
                     {h}
                   </th>
                 ))}
@@ -241,8 +276,13 @@ export default function MembresPage() {
                               ? <Badge bg={cat.bg} text={cat.text} label={CAT[m.categorie_affiliation as keyof typeof CAT] || m.categorie_affiliation} />
                               : <span className="text-gray-400">—</span>}
                           </td>
+                          <td className="px-4 py-3.5 hidden lg:table-cell">
+                            {m.cellule
+                              ? <span className="text-xs font-medium px-2 py-1 rounded-full bg-indigo-50 text-indigo-700">{CELLULE_LABEL[m.cellule] || m.cellule}</span>
+                              : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
                           <td className="px-4 py-3.5 text-gray-600 text-sm hidden md:table-cell">{m.ville_residence || "—"}</td>
-                          <td className="px-4 py-3.5 text-gray-500 text-xs hidden lg:table-cell">
+                          <td className="px-4 py-3.5 text-gray-500 text-xs hidden xl:table-cell">
                             {m.statut_socio_pro === "ETUDIANT" ? "Étudiant" : m.statut_socio_pro === "TRAVAILLEUR" ? "Travailleur" : "Autre"}
                           </td>
                           <td className="px-4 py-3.5">
@@ -272,7 +312,7 @@ export default function MembresPage() {
               </AnimatePresence>
 
               {!loading && data?.results?.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-16 text-gray-400">
+                <tr><td colSpan={8} className="text-center py-16 text-gray-400">
                   <Users size={40} className="mx-auto mb-3 opacity-30" />
                   <p className="text-sm font-medium">Aucun membre trouvé</p>
                 </td></tr>
