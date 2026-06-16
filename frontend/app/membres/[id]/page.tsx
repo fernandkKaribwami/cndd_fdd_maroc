@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { membresApi, cotisationsApi } from "@/lib/api";
 import AppLayout from "@/components/layout/AppLayout";
+import MembreFormModal from "@/components/membres/MembreFormModal";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface ProfilEtudiant {
@@ -90,6 +91,7 @@ export default function MembreDetailPage() {
   const [resume, setResume] = useState<Resume | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"profil" | "cotisations">("profil");
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -128,15 +130,36 @@ export default function MembreDetailPage() {
   return (
     <AppLayout title="Profil membre" subtitle={`${membre.prenom} ${membre.nom}`}>
 
-      {/* ── Retour ──────────────────────────────────────────────── */}
-      <motion.button
-        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-        whileHover={{ x: -3 }}
-        onClick={() => router.back()}
-        className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-red-600 mb-5 transition-colors"
-      >
-        <ArrowLeft size={15} /> Retour à la liste
-      </motion.button>
+      {/* ── Retour + Modifier ───────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-5">
+        <motion.button
+          initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+          whileHover={{ x: -3 }}
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-red-600 transition-colors"
+        >
+          <ArrowLeft size={15} /> Retour à la liste
+        </motion.button>
+        <motion.button
+          initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }}
+          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => setShowEdit(true)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl text-white"
+          style={{ background: "linear-gradient(135deg, #2563EB, #1d4ed8)", boxShadow: "0 4px 12px rgba(37,99,235,0.25)" }}
+        >
+          <Edit2 size={13} /> Modifier
+        </motion.button>
+      </div>
+
+      <MembreFormModal
+        open={showEdit}
+        membreId={membre.id}
+        onClose={() => setShowEdit(false)}
+        onSuccess={() => {
+          setShowEdit(false);
+          membresApi.get(Number(id)).then(r => setMembre(r.data));
+        }}
+      />
 
       {/* ── Hero card ─────────────────────────────────────────────
           Fond sombre avec drapeaux CNDD bien visibles              */}

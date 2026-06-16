@@ -7,7 +7,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import FilterPanel from "@/components/filters/FilterPanel";
 import MembreFormModal from "@/components/membres/MembreFormModal";
 import { membresApi } from "@/lib/api";
-import { Plus, Download, Search, ChevronLeft, ChevronRight, Users, ChevronRight as Go } from "lucide-react";
+import { Plus, Download, Search, ChevronLeft, ChevronRight, Users, ChevronRight as Go, Pencil } from "lucide-react";
 
 interface Membre {
   id: number; nom: string; prenom: string; sexe: string;
@@ -67,6 +67,7 @@ export default function MembresPage() {
   const [filters, setFilters] = useState<Record<string, string | undefined>>({});
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
+  const [editId, setEditId] = useState<number | undefined>();
   const PAGE_SIZE = 25;
 
   const fetch = useCallback(async () => {
@@ -179,7 +180,16 @@ export default function MembresPage() {
                               : <span className="text-gray-300 text-xs">—</span>}
                           </td>
                           <td className="px-3 py-3.5">
-                            <Go size={14} className="text-gray-300 group-hover:text-red-400 transition-colors" />
+                            <div className="flex items-center gap-1">
+                              <motion.button
+                                whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
+                                onClick={e => { e.stopPropagation(); setEditId(m.id); setShowModal(true); }}
+                                className="w-7 h-7 rounded-lg border border-gray-100 flex items-center justify-center text-gray-300 hover:text-blue-500 hover:border-blue-200 hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100"
+                                title="Modifier">
+                                <Pencil size={12} />
+                              </motion.button>
+                              <Go size={14} className="text-gray-300 group-hover:text-red-400 transition-colors" />
+                            </div>
                           </td>
                         </motion.tr>
                       );
@@ -216,8 +226,12 @@ export default function MembresPage() {
         )}
       </motion.div>
 
-      <MembreFormModal open={showModal} onClose={() => setShowModal(false)}
-        onSuccess={() => { fetch(); setShowModal(false); }} />
+      <MembreFormModal
+        open={showModal}
+        membreId={editId}
+        onClose={() => { setShowModal(false); setEditId(undefined); }}
+        onSuccess={() => { fetch(); setShowModal(false); setEditId(undefined); }}
+      />
     </AppLayout>
   );
 }
