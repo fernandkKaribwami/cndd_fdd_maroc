@@ -3,12 +3,13 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Filter, X, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
-import { referentielsApi } from "@/lib/api";
+import { referentielsApi, VILLES_MAROC } from "@/lib/api";
 
 interface FilterValues {
   categorie_affiliation?: string;
   statut_compte?: string;
   statut_socio_pro?: string;
+  ville_residence?: string;
   cycle?: string;
   domaine?: string;
   filiere?: string;
@@ -129,6 +130,14 @@ export default function FilterPanel({
                   <option value="ETUDIANT">Étudiant</option>
                   <option value="TRAVAILLEUR">Travailleur</option>
                   <option value="SANS_ACTIVITE">Sans activité</option>
+                </select>
+              </div>
+
+              <div>
+                <label className={LABEL_CLS}>Ville de résidence</label>
+                <select className={SELECT_CLS} value={filters.ville_residence || ""} onChange={e => set("ville_residence", e.target.value)}>
+                  <option value="">Toutes</option>
+                  {VILLES_MAROC.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
 

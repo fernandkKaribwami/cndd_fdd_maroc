@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, UserPlus, UserCog } from "lucide-react";
-import { membresApi, referentielsApi } from "@/lib/api";
+import { membresApi, referentielsApi, VILLES_MAROC } from "@/lib/api";
 
 interface Ref { id: number; nom: string; }
 
@@ -252,7 +252,11 @@ export default function MembreFormModal({ open, onClose, onSuccess, membreId }: 
                       <input type="email" className={INPUT_CLS} value={form.email} onChange={e => set("email", e.target.value)} placeholder="email@exemple.com" />
                     </Field>
                     <Field label="Ville de résidence">
-                      <input className={INPUT_CLS} value={form.ville_residence} onChange={e => set("ville_residence", e.target.value)} placeholder="Casablanca" />
+                      <input list="villes-maroc-modal" className={INPUT_CLS} value={form.ville_residence}
+                        onChange={e => set("ville_residence", e.target.value)} placeholder="Casablanca" />
+                      <datalist id="villes-maroc-modal">
+                        {VILLES_MAROC.map(v => <option key={v} value={v} />)}
+                      </datalist>
                     </Field>
                     <Field label="Arrivée au Maroc">
                       <input type="date" className={INPUT_CLS} value={form.date_arrivee_maroc || ""} onChange={e => set("date_arrivee_maroc", e.target.value)} />
@@ -351,9 +355,9 @@ export default function MembreFormModal({ open, onClose, onSuccess, membreId }: 
 
                 <div className="border-t border-gray-100"/>
 
-                <Field label="Observations">
-                  <textarea value={form.observations} onChange={e => set("observations", e.target.value)}
-                    rows={2} placeholder="Notes éventuelles…"
+                <Field label="Observations *">
+                  <textarea required value={form.observations} onChange={e => set("observations", e.target.value)}
+                    rows={2} placeholder="Contexte d'adhésion, remarques…"
                     className={INPUT_CLS + " resize-y"} />
                 </Field>
 

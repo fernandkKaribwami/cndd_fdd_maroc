@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import AppLayout from "@/components/layout/AppLayout";
 import FilterPanel from "@/components/filters/FilterPanel";
 import MembreFormModal from "@/components/membres/MembreFormModal";
 import { membresApi } from "@/lib/api";
-import { Plus, Download, Search, ChevronLeft, ChevronRight, Users, ChevronRight as Go, Pencil } from "lucide-react";
+import { Plus, Download, Search, ChevronLeft, ChevronRight, Users, ChevronRight as Go, Pencil, Upload, FileSpreadsheet, Loader2, X } from "lucide-react";
 
 interface Membre {
   id: number; nom: string; prenom: string; sexe: string;
@@ -68,6 +68,9 @@ export default function MembresPage() {
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<number | undefined>();
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ crees: number; erreurs: { ligne: number; erreur: string }[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const PAGE_SIZE = 25;
 
   const fetch = useCallback(async () => {
@@ -89,6 +92,30 @@ export default function MembresPage() {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleTemplateDownload = async () => {
+    const r = await membresApi.templateImport();
+    const url = window.URL.createObjectURL(new Blob([r.data]));
+    const a = document.createElement("a"); a.href = url; a.download = "modele_import_membres.xlsx"; a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const r = await membresApi.importExcel(file);
+      setImportResult(r.data);
+      fetch();
+    } catch {
+      setImportResult({ crees: 0, erreurs: [{ ligne: 0, erreur: "Erreur lors de l'import" }] });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
   return (
@@ -108,16 +135,63 @@ export default function MembresPage() {
         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
           onClick={handleExport}
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-green-300 hover:text-green-700 transition-colors">
-          <Download size={14} /> Excel
+          <Download size={14} /> Exporter
+        </motion.button>
+
+        <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+
+        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+          onClick={() => fileInputRef.current?.click()} disabled={importing}
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:text-blue-700 transition-colors disabled:opacity-60">
+          {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+          Importer
         </motion.button>
 
         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-          onClick={() => setShowModal(true)}
+          onClick={handleTemplateDownload}
+          title="Télécharger le modèle Excel d'import"
+          className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold rounded-xl bg-white border border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700 transition-colors">
+          <FileSpreadsheet size={14} /> Modèle
+        </motion.button>
+
+        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+          onClick={() => { setEditId(undefined); setShowModal(true); }}
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl text-white"
           style={{ background: "linear-gradient(135deg, #CE1126, #991010)", boxShadow: "0 4px 12px rgba(206,17,38,0.25)" }}>
           <Plus size={14} /> Ajouter un membre
         </motion.button>
       </div>
+
+      {/* ── Résultat import ──────────────────────────────────────── */}
+      <AnimatePresence>
+        {importResult && (
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            className={`flex items-start justify-between gap-4 px-4 py-3 rounded-xl border text-sm mb-4 ${
+              importResult.erreurs.length === 0
+                ? "bg-green-50 border-green-200 text-green-800"
+                : "bg-amber-50 border-amber-200 text-amber-800"
+            }`}>
+            <div>
+              <span className="font-bold">
+                {importResult.crees} membre{importResult.crees !== 1 ? "s" : ""} importé{importResult.crees !== 1 ? "s" : ""}
+              </span>
+              {importResult.erreurs.length > 0 && (
+                <ul className="mt-1 text-xs space-y-0.5 opacity-80">
+                  {importResult.erreurs.slice(0, 3).map((e, i) => (
+                    <li key={i}>Ligne {e.ligne} : {e.erreur}</li>
+                  ))}
+                  {importResult.erreurs.length > 3 && (
+                    <li>…et {importResult.erreurs.length - 3} autre(s) erreur(s)</li>
+                  )}
+                </ul>
+              )}
+            </div>
+            <button onClick={() => setImportResult(null)} className="flex-shrink-0 opacity-50 hover:opacity-100 mt-0.5">
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Table ───────────────────────────────────────────────── */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}

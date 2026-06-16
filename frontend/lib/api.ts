@@ -1,6 +1,17 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
+export const VILLES_MAROC = [
+  "Agadir", "Al Hoceima", "Azilal", "Azrou", "Béni Mellal", "Berkane",
+  "Berrechid", "Casablanca", "Chefchaouen", "Dakhla", "El Jadida",
+  "Errachidia", "Essaouira", "Fès", "Guelmim", "Ifrane", "Inezgane",
+  "Kénitra", "Khémisset", "Khouribga", "Laâyoune", "Larache",
+  "Marrakech", "Meknès", "Midelt", "Mohammedia", "Nador",
+  "Ouarzazate", "Oujda", "Rabat", "Safi", "Salé", "Settat",
+  "Sidi Kacem", "Sidi Slimane", "Tan-Tan", "Tanger", "Taroudant",
+  "Taourirt", "Taza", "Temara", "Tétouan", "Tiznit", "Zagora",
+];
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 const api = axios.create({
@@ -72,6 +83,15 @@ export const membresApi = {
   delete: (id: number) => api.delete(`/membres/${id}/`),
   exportExcel: (params?: Record<string, unknown>) =>
     api.get("/membres/export-excel/", { params, responseType: "blob" }),
+  templateImport: () =>
+    api.get("/membres/template-import/", { responseType: "blob" }),
+  importExcel: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return api.post("/membres/import-excel/", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
   etudiants: (params?: Record<string, unknown>) =>
     api.get("/membres/etudiants/", { params }),
 };
