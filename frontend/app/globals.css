@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #CE1126;
+  --secondary: #1EB53A;
+  --background: #F5F5F5;
+  --foreground: #1F2937;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar custom */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #CE1126;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #991B1B;
+}
+
+/* Animations */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-in-out;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Badge statuts */
+.badge-a-jour { @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-en-retard { @apply bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-partiel { @apply bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+.badge-exonere { @apply bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-0.5 rounded-full; }
