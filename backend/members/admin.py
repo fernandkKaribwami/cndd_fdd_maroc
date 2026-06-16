@@ -23,6 +23,7 @@ class MembreAdmin(ImportExportModelAdmin):
     inlines = [ProfilEtudiantInline]
     date_hierarchy = "date_adhesion"
     ordering = ["nom", "prenom"]
+    readonly_fields = ["date_adhesion"]
 
     fieldsets = (
         ("Identité", {
