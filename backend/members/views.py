@@ -10,6 +10,7 @@ import re
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from .models import Membre, ProfilEtudiant
+from core.models import Cycle, Domaine, Filiere, Niveau
 from .serializers import (
     MembreListSerializer, MembreDetailSerializer, MembreCreateUpdateSerializer,
     ProfilEtudiantSerializer
@@ -53,6 +54,17 @@ CELLULE_MAP_PDF = {
 CELLULE_VALID = {
     "TANGER_TETOUAN_OUJDA", "KENITRA", "AGADIR", "RABAT_SALE",
     "LAAYOUNE_DAKHLA", "FEZ_MEKNES", "CASABLANCA", "AUTRE",
+}
+
+# Ville principale associée à chaque cellule (pour pré-remplir ville_residence)
+CELLULE_VILLE = {
+    "TANGER_TETOUAN_OUJDA": "Tanger",
+    "KENITRA": "Kénitra",
+    "AGADIR": "Agadir",
+    "RABAT_SALE": "Rabat",
+    "LAAYOUNE_DAKHLA": "Laâyoune",
+    "FEZ_MEKNES": "Fès",
+    "CASABLANCA": "Casablanca",
 }
 
 PDF_SKIP_PATTERNS = re.compile(
@@ -309,11 +321,24 @@ class MembreViewSet(viewsets.ModelViewSet):
             return None
 
         def classify_header(text_upper):
-            """Retourne le statut socio-pro si la cellule est un en-tête de colonne."""
+            """Retourne (statut, cycle_nom, skip) pour un en-tête de colonne.
+            skip=True → colonne à ignorer (spécialités, descriptions, etc.)
+            """
+            # Colonnes à ignorer explicitement
+            if re.search(r'SPÉCIALTÉ|SPÉCIALITÉ|SPECIALTE|SPECIALITÉ', text_upper):
+                return ("SKIP", None)
             if re.search(r'PROFESSIONNEL', text_upper):
-                return "TRAVAILLEUR"
-            if re.search(r'DOCTORAL|MASTER|\bINGÉNI|INGENI|MÉDECINE|MEDECINE|\bLICENCE\b', text_upper):
-                return "ETUDIANT"
+                return ("TRAVAILLEUR", None)
+            if "DOCTORAL" in text_upper:
+                return ("ETUDIANT", "Doctorat")
+            if "MASTER" in text_upper:
+                return ("ETUDIANT", "Master")
+            if re.search(r'INGÉNI|INGENI', text_upper):
+                return ("ETUDIANT", "Cycle ingénieur")
+            if re.search(r'MÉDECINE|MEDECINE', text_upper):
+                return ("ETUDIANT", "Médecine")
+            if re.search(r'\bLICENCE\b', text_upper):
+                return ("ETUDIANT", "Licence")
             return None
 
         def is_name_cell(text):
@@ -372,6 +397,7 @@ class MembreViewSet(viewsets.ModelViewSet):
         extracted = []
         current_cellule = ""
         current_statut = "AUTRE"
+        current_cycle = None
 
         try:
             with pdfplumber.open(file) as pdf:
@@ -380,8 +406,8 @@ class MembreViewSet(viewsets.ModelViewSet):
                     if not tables:
                         continue
 
-                    # col_idx → statut (mis à jour par les en-têtes de colonnes)
-                    col_statuts: dict = {}
+                    # col_idx → (statut, cycle_nom)  |  "SKIP" → colonne ignorée
+                    col_info: dict = {}
 
                     for table in tables:
                         for row in table:
@@ -389,7 +415,8 @@ class MembreViewSet(viewsets.ModelViewSet):
                                 continue
 
                             # ── Passe 1 : détecter si c'est une ligne d'en-têtes ──
-                            new_col_statuts = {}
+                            new_col_info = {}
+                            header_found = False
                             for ci, cell in enumerate(row):
                                 if not cell:
                                     continue
@@ -398,17 +425,22 @@ class MembreViewSet(viewsets.ModelViewSet):
                                     detected = detect_cellule(upper_cs)
                                     if detected:
                                         current_cellule = detected
-                                    new_col_statuts[ci] = None
+                                    new_col_info[ci] = ("SKIP", None)
+                                    header_found = True
                                 else:
-                                    st = classify_header(upper_cs)
-                                    if st is not None:
-                                        new_col_statuts[ci] = st
+                                    result = classify_header(upper_cs)
+                                    if result is not None:
+                                        new_col_info[ci] = result
+                                        header_found = True
 
-                            if new_col_statuts:
-                                col_statuts = {k: v for k, v in new_col_statuts.items() if v}
-                                vals = [v for v in col_statuts.values() if v]
-                                if vals:
-                                    current_statut = vals[0]
+                            if header_found and new_col_info:
+                                col_info = new_col_info
+                                # Statut/cycle global = première colonne non-SKIP
+                                for v in col_info.values():
+                                    if v[0] != "SKIP":
+                                        current_statut = v[0]
+                                        current_cycle = v[1]
+                                        break
                                 continue  # ligne d'en-tête → pas de noms
 
                             # ── Passe 2 : traiter les cellules de données ──
@@ -427,7 +459,13 @@ class MembreViewSet(viewsets.ModelViewSet):
                                         current_cellule = detected
                                     continue
 
-                                cell_statut = col_statuts.get(ci, current_statut) or current_statut
+                                # Colonne marquée SKIP (ex: "Spécialté")
+                                col_meta = col_info.get(ci)
+                                if col_meta and col_meta[0] == "SKIP":
+                                    continue
+
+                                cell_statut = (col_meta[0] if col_meta else None) or current_statut
+                                cell_cycle = (col_meta[1] if col_meta else None) or current_cycle
 
                                 if is_name_cell(cs):
                                     nom, prenom = parse_name(cs)
@@ -438,6 +476,7 @@ class MembreViewSet(viewsets.ModelViewSet):
                                             "sexe": infer_sex(prenom),
                                             "cellule": current_cellule,
                                             "statut_socio_pro": cell_statut,
+                                            "cycle_nom": cell_cycle,
                                             "categorie_affiliation": "ABAGUMYABANGA",
                                         })
 
@@ -452,9 +491,44 @@ class MembreViewSet(viewsets.ModelViewSet):
         skipped = 0
         errors = []
 
+        # Domaine/filière/niveau génériques pour les étudiants sans profil détaillé
+        _domaine_cache: dict = {}
+        _filiere_cache: dict = {}
+        _cycle_cache: dict = {}
+        _niveau_cache: dict = {}
+
+        def get_or_create_cycle(nom):
+            if nom not in _cycle_cache:
+                obj, _ = Cycle.objects.get_or_create(nom=nom)
+                _cycle_cache[nom] = obj
+            return _cycle_cache[nom]
+
+        def get_placeholder_domaine():
+            key = "Non spécifié"
+            if key not in _domaine_cache:
+                obj, _ = Domaine.objects.get_or_create(nom=key)
+                _domaine_cache[key] = obj
+            return _domaine_cache[key]
+
+        def get_placeholder_filiere(domaine):
+            key = domaine.id
+            if key not in _filiere_cache:
+                obj, _ = Filiere.objects.get_or_create(
+                    nom="Non spécifiée", domaine=domaine
+                )
+                _filiere_cache[key] = obj
+            return _filiere_cache[key]
+
+        def get_placeholder_niveau():
+            key = "Non spécifié"
+            if key not in _niveau_cache:
+                obj, _ = Niveau.objects.get_or_create(nom=key)
+                _niveau_cache[key] = obj
+            return _niveau_cache[key]
+
         for i, m_data in enumerate(extracted):
             try:
-                _, was_created = Membre.objects.get_or_create(
+                membre, was_created = Membre.objects.get_or_create(
                     nom__iexact=m_data["nom"],
                     prenom__iexact=m_data["prenom"],
                     defaults={
@@ -470,6 +544,25 @@ class MembreViewSet(viewsets.ModelViewSet):
                 )
                 if was_created:
                     created += 1
+                    # Créer ProfilEtudiant si le cycle est connu
+                    cycle_nom = m_data.get("cycle_nom")
+                    if m_data["statut_socio_pro"] == "ETUDIANT" and cycle_nom:
+                        cycle = get_or_create_cycle(cycle_nom)
+                        domaine = get_placeholder_domaine()
+                        filiere = get_placeholder_filiere(domaine)
+                        niveau = get_placeholder_niveau()
+                        ProfilEtudiant.objects.get_or_create(
+                            membre=membre,
+                            defaults={
+                                "cycle": cycle,
+                                "domaine": domaine,
+                                "filiere": filiere,
+                                "niveau": niveau,
+                                "etablissement": "Non spécifié",
+                                "ville_etudes": "",
+                                "annee_academique": "2025-2026",
+                            },
+                        )
                 else:
                     skipped += 1
             except Exception as e:
