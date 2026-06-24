@@ -9,6 +9,7 @@ export const CELLULES_MAROC = [
   { value: "LAAYOUNE_DAKHLA",      label: "Cellule Laâyoune-Dakhla" },
   { value: "FEZ_MEKNES",           label: "Cellule Fès-Meknès" },
   { value: "CASABLANCA",           label: "Cellule Casablanca" },
+  { value: "MARRAKECH",            label: "Cellule Marrakech" },
   { value: "AUTRE",                label: "Autre cellule" },
 ];
 

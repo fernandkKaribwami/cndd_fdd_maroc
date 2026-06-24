@@ -27,6 +27,7 @@ class Membre(models.Model):
         ("LAAYOUNE_DAKHLA", "Cellule Laâyoune-Dakhla"),
         ("FEZ_MEKNES", "Cellule Fès-Meknès"),
         ("CASABLANCA", "Cellule Casablanca"),
+        ("MARRAKECH", "Cellule Marrakech"),
         ("AUTRE", "Autre cellule"),
     ]
 
