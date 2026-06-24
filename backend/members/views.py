@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from django.http import HttpResponse
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from datetime import datetime, date
@@ -556,6 +557,7 @@ def _parse_excel_workbook(wb) -> tuple:
 # CRÉATION DE MEMBRES (partagée PDF + Excel)
 # ─────────────────────────────────────────────────────────────────────────────
 
+@transaction.atomic
 def _create_membres(records: list) -> dict:
     """Insère les membres et profils étudiants à partir d'une liste de dicts."""
     created = skipped = 0
@@ -806,15 +808,8 @@ class MembreViewSet(viewsets.ModelViewSet):
         if not file:
             return Response({"error": "Aucun fichier fourni"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Colonnes à ignorer dans les PDF (descriptions, pas des noms)
-        _PDF_SKIP = re.compile(
-            r'SPÉCIALTÉ|SPÉCIALITÉ|SPECIALTE|SPECIALITÉ', re.IGNORECASE
-        )
-
         def _classify_pdf_header(text_upper):
-            """Retourne (statut, cycle) ou ("SKIP", None) pour un en-tête PDF."""
-            if _PDF_SKIP.search(text_upper):
-                return "SKIP", None
+            """Retourne (statut, cycle) ou (None, None) si ce n'est pas un en-tête."""
             lbl, stat, cyc = _normalize_cat(text_upper)
             if lbl:
                 return stat, cyc
@@ -824,6 +819,7 @@ class MembreViewSet(viewsets.ModelViewSet):
         current_cellule = ''
         current_statut = 'AUTRE'
         current_cycle = None
+        col_info: dict = {}  # persiste d'une page à l'autre (tableaux qui se coupent)
 
         try:
             with pdfplumber.open(file) as pdf:
@@ -831,16 +827,15 @@ class MembreViewSet(viewsets.ModelViewSet):
                     tables = page.extract_tables()
                     if not tables:
                         continue
-                    col_info: dict = {}
 
                     for table in tables:
                         for row in table:
                             if not row:
                                 continue
 
-                            # Passe 1 : détecter les lignes d'en-têtes
-                            new_col_info = {}
-                            header_found = False
+                            # Passe 0 : détecter les CELLULE → mettre à jour current_cellule
+                            # (séparé de la détection d'en-têtes car une ligne peut avoir
+                            #  CELLULE + des noms dans d'autres colonnes)
                             for ci, cell in enumerate(row):
                                 if not cell:
                                     continue
@@ -849,16 +844,32 @@ class MembreViewSet(viewsets.ModelViewSet):
                                     detected = _map_region(upper)
                                     if detected != 'AUTRE':
                                         current_cellule = detected
+
+                            # Passe 1 : détecter les lignes d'en-têtes de catégories
+                            # Une ligne est un en-tête seulement si elle contient de vraies
+                            # catégories (pas juste CELLULE).
+                            new_col_info = {}
+                            header_found = False
+                            for ci, cell in enumerate(row):
+                                if not cell:
+                                    continue
+                                upper = str(cell).strip().upper()
+                                if 'CELLULE' in upper:
                                     new_col_info[ci] = ('SKIP', None)
-                                    header_found = True
+                                    # Ne PAS déclencher header_found pour CELLULE
                                 else:
                                     stat, cyc = _classify_pdf_header(upper)
                                     if stat is not None:
                                         new_col_info[ci] = (stat, cyc)
                                         header_found = True
 
-                            if header_found and new_col_info:
+                            if header_found:
                                 col_info = new_col_info
+                                # Si ci=0 porte une catégorie académique (pas CELLULE) →
+                                # section étudiants listés sans info cellule dans ce PDF
+                                c0 = new_col_info.get(0)
+                                if c0 and c0[0] not in ('SKIP', None):
+                                    current_cellule = ''
                                 for v in col_info.values():
                                     if v[0] not in ('SKIP', None):
                                         current_statut = v[0]
@@ -873,13 +884,9 @@ class MembreViewSet(viewsets.ModelViewSet):
                                 cs = str(cell).strip()
                                 if not cs:
                                     continue
-                                upper = cs.upper()
 
-                                if 'CELLULE' in upper:
-                                    detected = _map_region(upper)
-                                    if detected != 'AUTRE':
-                                        current_cellule = detected
-                                    continue
+                                if 'CELLULE' in cs.upper():
+                                    continue  # déjà traité en passe 0
 
                                 col_meta = col_info.get(ci)
                                 if col_meta and col_meta[0] == 'SKIP':
