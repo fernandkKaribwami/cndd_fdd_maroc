@@ -3,15 +3,16 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, GraduationCap, CreditCard, LayoutDashboard, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, GraduationCap, Briefcase, CreditCard, LayoutDashboard, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 import { logout } from "@/lib/auth";
 import { useState } from "react";
 
 const NAV = [
   { href: "/",            icon: LayoutDashboard, label: "Tableau de bord", accent: "#CE1126" },
   { href: "/membres",     icon: Users,            label: "Membres",         accent: "#1EB53A" },
-  { href: "/etudiants",   icon: GraduationCap,    label: "Étudiants",       accent: "#3B82F6" },
-  { href: "/cotisations", icon: CreditCard,        label: "Cotisations",     accent: "#F59E0B" },
+  { href: "/etudiants",    icon: GraduationCap,    label: "Étudiants",       accent: "#3B82F6" },
+  { href: "/travailleurs", icon: Briefcase,         label: "Travailleurs",    accent: "#8B5CF6" },
+  { href: "/cotisations",  icon: CreditCard,        label: "Cotisations",     accent: "#F59E0B" },
 ];
 
 export default function Sidebar() {

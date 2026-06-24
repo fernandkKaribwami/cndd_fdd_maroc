@@ -155,7 +155,7 @@ export default function DashboardPage() {
         <KpiCard icon={GraduationCap} label="Étudiants" value={data?.totaux.etudiants || 0}
           sub="Profil académique" accent="#1EB53A" delay={0.07} href="/etudiants" />
         <KpiCard icon={Briefcase} label="Travailleurs" value={data?.totaux.travailleurs || 0}
-          sub="Statut professionnel" accent="#3B82F6" delay={0.14} />
+          sub="Statut professionnel" accent="#8B5CF6" delay={0.14} href="/travailleurs" />
         <KpiCard icon={TrendingUp} label="Recouvrement" value={`${taux}%`}
           sub={`Cotisations ${data?.cotisations.annee || ""}`} accent="#F59E0B" delay={0.21} href="/cotisations" />
       </div>
