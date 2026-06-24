@@ -96,7 +96,7 @@ export default function MembresPage() {
   const [editId, setEditId]         = useState<number | undefined>();
   const [importing, setImporting]   = useState(false);
   const [importResult, setImportResult] = useState<{
-    crees: number; ignores?: number; extraits?: number;
+    crees: number; mis_a_jour?: number; ignores?: number; extraits?: number;
     erreurs: { ligne?: number; index?: number; erreur: string }[];
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -283,12 +283,19 @@ export default function MembresPage() {
               <span className="font-bold">
                 {importResult.crees} membre{importResult.crees !== 1 ? "s" : ""} créé{importResult.crees !== 1 ? "s" : ""}
               </span>
-              {importResult.extraits !== undefined && (
-                <span className="ml-2 opacity-70">
-                  · {importResult.extraits} extraits du PDF
-                  {importResult.ignores ? `, ${importResult.ignores} déjà existants` : ""}
+              {!!importResult.mis_a_jour && (
+                <span className="ml-2 font-semibold text-blue-700">
+                  · {importResult.mis_a_jour} mis à jour
                 </span>
               )}
+              {importResult.extraits !== undefined ? (
+                <span className="ml-2 opacity-70">
+                  · {importResult.extraits} extraits du PDF
+                  {importResult.ignores ? `, ${importResult.ignores} inchangés` : ""}
+                </span>
+              ) : importResult.ignores ? (
+                <span className="ml-2 opacity-70">· {importResult.ignores} inchangés</span>
+              ) : null}
               {importResult.erreurs.length > 0 && (
                 <ul className="mt-1 text-xs space-y-0.5 opacity-80">
                   {importResult.erreurs.slice(0, 3).map((e, i) => (

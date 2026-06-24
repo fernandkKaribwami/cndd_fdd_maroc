@@ -560,8 +560,12 @@ def _parse_excel_workbook(wb) -> tuple:
 
 @transaction.atomic
 def _create_membres(records: list) -> dict:
-    """Insère les membres et profils étudiants à partir d'une liste de dicts."""
-    created = skipped = 0
+    """
+    Upsert des membres : crée si absent, met à jour si présent.
+    Règle de mise à jour : n'écrase que les champs non-vides du fichier
+    pour ne pas détruire les données saisies manuellement.
+    """
+    created = updated = skipped = 0
     errors = []
     _cache: dict = {}
 
@@ -591,48 +595,76 @@ def _create_membres(records: list) -> dict:
             _cache['niv'][key] = obj
         return _cache['niv'][key]
 
+    def _sync_profil(membre, r):
+        """Crée ou met à jour le ProfilEtudiant si statut = ETUDIANT."""
+        cycle_nom = r.get('cycle_nom')
+        if r.get('statut_socio_pro') != 'ETUDIANT' or not cycle_nom:
+            return
+        dom = _domaine()
+        ProfilEtudiant.objects.update_or_create(
+            membre=membre,
+            defaults={
+                'cycle': _cycle(cycle_nom),
+                'domaine': dom,
+                'filiere': _filiere(dom),
+                'niveau': _niveau(),
+                'etablissement': 'Non spécifié',
+                'ville_etudes': '',
+                'annee_academique': '2025-2026',
+            },
+        )
+
+    # Champs à synchroniser lors d'une mise à jour.
+    # Valeur vide ('') ou None dans le fichier = ne pas écraser la valeur en base.
+    _UPDATABLE = [
+        'cellule', 'statut_socio_pro', 'categorie_affiliation',
+        'sexe', 'ville_residence', 'email', 'telephone',
+    ]
+
     for i, r in enumerate(records):
         try:
-            membre, was_created = Membre.objects.get_or_create(
-                nom__iexact=r['nom'],
-                prenom__iexact=r['prenom'],
-                defaults={
-                    'nom': r['nom'],
-                    'prenom': r['prenom'],
-                    'sexe': r.get('sexe', 'M'),
-                    'cellule': r.get('cellule', ''),
-                    'statut_socio_pro': r.get('statut_socio_pro', 'AUTRE'),
-                    'categorie_affiliation': r.get('categorie_affiliation', 'DIASPORA'),
-                    'statut_compte': 'ACTIF',
-                    'ville_residence': r.get('ville_residence', ''),
-                    'email': r.get('email', ''),
-                    'telephone': r.get('telephone', ''),
-                    'observations': r.get('observations', 'Importé automatiquement'),
-                },
-            )
+            try:
+                membre = Membre.objects.get(nom__iexact=r['nom'], prenom__iexact=r['prenom'])
+                was_created = False
+            except Membre.DoesNotExist:
+                was_created = True
+                membre = None
+
             if was_created:
+                membre = Membre.objects.create(
+                    nom=r['nom'],
+                    prenom=r['prenom'],
+                    sexe=r.get('sexe', 'M'),
+                    cellule=r.get('cellule', ''),
+                    statut_socio_pro=r.get('statut_socio_pro', 'AUTRE'),
+                    categorie_affiliation=r.get('categorie_affiliation', 'DIASPORA'),
+                    statut_compte='ACTIF',
+                    ville_residence=r.get('ville_residence', ''),
+                    email=r.get('email', ''),
+                    telephone=r.get('telephone', ''),
+                    observations=r.get('observations', 'Importé automatiquement'),
+                )
                 created += 1
-                cycle_nom = r.get('cycle_nom')
-                if r.get('statut_socio_pro') == 'ETUDIANT' and cycle_nom:
-                    dom = _domaine()
-                    ProfilEtudiant.objects.get_or_create(
-                        membre=membre,
-                        defaults={
-                            'cycle': _cycle(cycle_nom),
-                            'domaine': dom,
-                            'filiere': _filiere(dom),
-                            'niveau': _niveau(),
-                            'etablissement': 'Non spécifié',
-                            'ville_etudes': '',
-                            'annee_academique': '2025-2026',
-                        },
-                    )
+                _sync_profil(membre, r)
             else:
-                skipped += 1
+                # Mettre à jour uniquement les champs non-vides du fichier
+                dirty = []
+                for field in _UPDATABLE:
+                    new_val = r.get(field)
+                    if new_val and new_val != getattr(membre, field):
+                        setattr(membre, field, new_val)
+                        dirty.append(field)
+                if dirty:
+                    membre.save(update_fields=dirty)
+                    updated += 1
+                    _sync_profil(membre, r)
+                else:
+                    skipped += 1
+
         except Exception as e:
             errors.append({'index': i + 1, 'nom': r.get('nom', '?'), 'erreur': str(e)})
 
-    return {'crees': created, 'ignores': skipped, 'erreurs': errors}
+    return {'crees': created, 'mis_a_jour': updated, 'ignores': skipped, 'erreurs': errors}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
