@@ -104,10 +104,10 @@ class ProfilEtudiant(models.Model):
     domaine = models.ForeignKey(Domaine, on_delete=models.PROTECT, verbose_name="Domaine")
     filiere = models.ForeignKey(Filiere, on_delete=models.PROTECT, verbose_name="Filière")
     niveau = models.ForeignKey(Niveau, on_delete=models.PROTECT, verbose_name="Niveau")
-    etablissement = models.CharField(max_length=200, verbose_name="Établissement")
-    ville_etudes = models.CharField(max_length=100, verbose_name="Ville d'études")
+    etablissement = models.CharField(max_length=200, blank=True, verbose_name="Établissement")
+    ville_etudes = models.CharField(max_length=100, blank=True, verbose_name="Ville d'études")
     annee_academique = models.CharField(
-        max_length=9,
+        max_length=9, blank=True,
         help_text="Format: 2025-2026",
         verbose_name="Année académique"
     )

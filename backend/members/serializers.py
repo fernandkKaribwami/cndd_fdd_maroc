@@ -17,6 +17,13 @@ class ProfilEtudiantSerializer(serializers.ModelSerializer):
             "etablissement", "ville_etudes", "annee_academique",
             "statut_parcours", "date_diplome",
         ]
+        extra_kwargs = {
+            "etablissement":    {"required": False, "allow_blank": True},
+            "ville_etudes":     {"required": False, "allow_blank": True},
+            "annee_academique": {"required": False, "allow_blank": True},
+            "statut_parcours":  {"required": False},
+            "date_diplome":     {"required": False, "allow_null": True},
+        }
 
 
 class MembreListSerializer(serializers.ModelSerializer):
@@ -59,7 +66,7 @@ class MembreDetailSerializer(serializers.ModelSerializer):
 
 
 class MembreCreateUpdateSerializer(serializers.ModelSerializer):
-    profil_etudiant = ProfilEtudiantSerializer(required=False)
+    profil_etudiant = ProfilEtudiantSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Membre
@@ -69,6 +76,22 @@ class MembreCreateUpdateSerializer(serializers.ModelSerializer):
             "categorie_affiliation", "statut_socio_pro", "statut_compte",
             "cellule", "observations", "profil_etudiant",
         ]
+        extra_kwargs = {
+            "telephone":          {"required": False, "allow_null": True, "allow_blank": True},
+            "email":              {"required": False, "allow_null": True, "allow_blank": True},
+            "ville_residence":    {"required": False, "allow_null": True, "allow_blank": True},
+            "observations":       {"required": False, "allow_null": True, "allow_blank": True},
+            "cellule":            {"required": False, "allow_blank": True},
+            "date_naissance":     {"required": False, "allow_null": True},
+            "date_arrivee_maroc": {"required": False, "allow_null": True},
+        }
+
+    def validate(self, data):
+        """Convertit null → '' pour les CharField optionnels."""
+        for field in ("telephone", "email", "ville_residence", "observations"):
+            if data.get(field) is None:
+                data[field] = ""
+        return data
 
     def create(self, validated_data):
         profil_data = validated_data.pop("profil_etudiant", None)
