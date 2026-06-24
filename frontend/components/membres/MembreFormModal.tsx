@@ -50,7 +50,7 @@ const EMPTY_FORM = {
 };
 
 const EMPTY_PROFIL = {
-  cycle: "", domaine: "", filiere: "", niveau: "",
+  cycle: "", domaine: "", filiere_nom: "", niveau: "",
   etablissement: "", ville_etudes: "",
   annee_academique: "2025-2026", statut_parcours: "EN_COURS",
 };
@@ -116,14 +116,13 @@ export default function MembreFormModal({ open, onClose, onSuccess, membreId }: 
         setProfil({
           cycle:            String(p.cycle || ""),
           domaine:          domaineId,
-          filiere:          String(p.filiere || ""),
+          filiere_nom:      p.filiere_detail?.nom || "",
           niveau:           String(p.niveau || ""),
           etablissement:    p.etablissement || "",
           ville_etudes:     p.ville_etudes || "",
           annee_academique: p.annee_academique || "2025-2026",
           statut_parcours:  p.statut_parcours || "EN_COURS",
         });
-        // Charger les filières du domaine
         if (domaineId) {
           referentielsApi.getFilieres(Number(domaineId))
             .then(r2 => setFilieres(r2.data.results || r2.data));
@@ -149,8 +148,8 @@ export default function MembreFormModal({ open, onClose, onSuccess, membreId }: 
       const payload: Record<string, unknown> = { ...form };
       if (isEtudiant && profil.cycle) {
         payload.profil_etudiant = {
-          cycle: Number(profil.cycle), domaine: Number(profil.domaine),
-          filiere: Number(profil.filiere), niveau: Number(profil.niveau),
+          cycle: Number(profil.cycle), domaine: Number(profil.domaine) || null,
+          filiere_nom: profil.filiere_nom || null, niveau: Number(profil.niveau),
           etablissement: profil.etablissement, ville_etudes: profil.ville_etudes,
           annee_academique: profil.annee_academique, statut_parcours: profil.statut_parcours,
         };
@@ -332,10 +331,17 @@ export default function MembreFormModal({ open, onClose, onSuccess, membreId }: 
                           </select>
                         </Field>
                         <Field label="Filière">
-                          <select className={SELECT_CLS} value={profil.filiere} onChange={e => setPro("filiere", e.target.value)}>
-                            <option value="">Sélectionner</option>
-                            {filieres.map(f => <option key={f.id} value={f.id}>{f.nom}</option>)}
-                          </select>
+                          <input
+                            type="text"
+                            list="filieres-datalist"
+                            placeholder="ex: Génie Civil, Finance, Droit..."
+                            value={profil.filiere_nom}
+                            onChange={e => setPro("filiere_nom", e.target.value)}
+                            className={SELECT_CLS}
+                          />
+                          <datalist id="filieres-datalist">
+                            {filieres.map(f => <option key={f.id} value={f.nom} />)}
+                          </datalist>
                         </Field>
                         <Field label="Niveau">
                           <select className={SELECT_CLS} value={profil.niveau} onChange={e => setPro("niveau", e.target.value)}>

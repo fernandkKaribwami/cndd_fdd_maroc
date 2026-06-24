@@ -8,16 +8,18 @@ class ProfilEtudiantSerializer(serializers.ModelSerializer):
     domaine_detail = DomaineSerializer(source="domaine", read_only=True)
     filiere_detail = FiliereSerializer(source="filiere", read_only=True)
     niveau_detail = NiveauSerializer(source="niveau", read_only=True)
+    filiere_nom = serializers.CharField(required=False, allow_blank=True, allow_null=True, write_only=True)
 
     class Meta:
         model = ProfilEtudiant
         fields = [
             "id", "cycle", "cycle_detail", "domaine", "domaine_detail",
-            "filiere", "filiere_detail", "niveau", "niveau_detail",
+            "filiere", "filiere_detail", "filiere_nom", "niveau", "niveau_detail",
             "etablissement", "ville_etudes", "annee_academique",
             "statut_parcours", "date_diplome",
         ]
         extra_kwargs = {
+            "filiere":          {"required": False, "allow_null": True},
             "etablissement":    {"required": False, "allow_blank": True},
             "ville_etudes":     {"required": False, "allow_blank": True},
             "annee_academique": {"required": False, "allow_blank": True},
@@ -93,10 +95,27 @@ class MembreCreateUpdateSerializer(serializers.ModelSerializer):
                 data[field] = ""
         return data
 
+    @staticmethod
+    def _resolve_filiere(profil_data):
+        """Résout filiere_nom (texte libre) → objet Filiere via get_or_create."""
+        from core.models import Domaine, Filiere
+        filiere_nom = profil_data.pop("filiere_nom", None)
+        if not filiere_nom or profil_data.get("filiere"):
+            return
+        filiere_nom = filiere_nom.strip()
+        if not filiere_nom:
+            return
+        domaine = profil_data.get("domaine")
+        if not domaine:
+            domaine, _ = Domaine.objects.get_or_create(nom="Non spécifié")
+        filiere, _ = Filiere.objects.get_or_create(nom=filiere_nom, domaine=domaine)
+        profil_data["filiere"] = filiere
+
     def create(self, validated_data):
         profil_data = validated_data.pop("profil_etudiant", None)
         membre = Membre.objects.create(**validated_data)
         if profil_data:
+            self._resolve_filiere(profil_data)
             ProfilEtudiant.objects.create(membre=membre, **profil_data)
         return membre
 
@@ -106,6 +125,7 @@ class MembreCreateUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         if profil_data:
+            self._resolve_filiere(profil_data)
             ProfilEtudiant.objects.update_or_create(
                 membre=instance, defaults=profil_data
             )
